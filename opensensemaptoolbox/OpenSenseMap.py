@@ -146,7 +146,7 @@ class OpenSenseMap(APIressources):
                 if box.boxId in ids:
                     box.combine_records_with_fetched_data()
                     if box.data is not None:
-                        box.data['id'] = box.boxId
+                        box.data['boxId'] = box.boxId
                         buffer.append(box.data)
             print(buffer)
             clean_crs = [gdf.to_crs('EPSG:4326') for gdf in buffer]
