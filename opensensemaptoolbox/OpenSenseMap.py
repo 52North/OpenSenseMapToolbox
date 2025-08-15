@@ -98,7 +98,7 @@ class OpenSenseMap(APIressources):
                     print(f"you need a sql-alchemist engine to proceed ")
                     return
                 if isinstance(engine, sqlalchemy.engine.Engine):
-                    all_boxIds = pd.DataFrame(sorted([box.boxId for box in self.boxes]), columns=['id'])
+                    all_boxIds = pd.DataFrame(sorted([box.boxId for box in self.boxes]), columns=['boxId'])
                     all_boxIds.to_sql(self.all_box_ids_table, con=engine, if_exists="replace", index=False)
                     for box in self.boxes:
                         box.combine_records_with_fetched_data()
@@ -124,7 +124,7 @@ class OpenSenseMap(APIressources):
         else:
             if mode == 'postgis':
                 df = pd.read_sql(f"SELECT * FROM {self.all_box_ids_table}", con=engine)
-                box_ids = [i for i in df['id']]
+                box_ids = [i for i in df['boxId']]
                 self.add_box(box_ids)
             for box in self.boxes:
                 box.read_box_data(**kwargs)
