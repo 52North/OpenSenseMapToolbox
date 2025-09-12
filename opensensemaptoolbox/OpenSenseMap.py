@@ -29,6 +29,8 @@ class OpenSenseMap(APIressources):
         })
         self.modes = ['csv', 'postgis']
         self.all_box_ids_table = 'all_boxids'
+        self.existing_records_ids = []
+        self.no_existing_records_ids = []
         self.merged_gdf = None
 
 
@@ -107,7 +109,7 @@ class OpenSenseMap(APIressources):
 
     def fetch_box_data(self, **kwargs):
         with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = [executor.submit(box.fetch_box_data, **kwargs) for box in self.boxes]
+            futures = [executor.submit(box.fetch_box_data, **kwargs) for box in self.boxes if box.boxId in self.no_existing_records_ids]
             for future in as_completed(futures):
                 try:
                     future.result()
@@ -123,17 +125,24 @@ class OpenSenseMap(APIressources):
             print(f"""need 'mode' to read from datasource. Possible modes are: {' ,'.join(self.modes)}""")
         else:
             if mode == 'postgis':
-                df = pd.read_sql(f"SELECT * FROM {self.all_box_ids_table}", con=engine)
-                box_ids = [i for i in df['boxId']]
-                self.add_box(box_ids)
+                for box in self.boxes:
+                    inspector = sqlalchemy.inspect(engine)
+                    table_exists = box.boxId in inspector.get_table_names()
+                    if table_exists:
+                        self.existing_records_ids.append(box.boxId)
+                    else:
+                        self.no_existing_records_ids.append(box.boxId)
+
+
             for box in self.boxes:
-                box.read_box_data(**kwargs)
+                if box.boxId in self.existing_records_ids:
+                    box.read_box_data(**kwargs)
 
 
     def update_OSM(self, **kwargs):
         self.read_OSM(**kwargs)
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(box.check_for_new_data) for box in self.boxes]
+            futures = [executor.submit(box.check_for_new_data) for box in self.boxes if box.boxId in self.existing_records_ids]
             for future in as_completed(futures):
                 future.result()
 
